@@ -13,7 +13,7 @@ namespace swm49
     {
         static void Main(string[] args)
         {
-            IProcess p = new Process();
+            Process p = new Process();
 
             p.Start();
 

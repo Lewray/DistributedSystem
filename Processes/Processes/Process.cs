@@ -14,7 +14,7 @@ using ProcessContracts;
 
 namespace Processes
 {
-    public class Process : IProcess
+    public class Process
     {
         IElection _election;
 
@@ -25,8 +25,6 @@ namespace Processes
         ICoordinator _coordinator;
 
         bool _isCoordinator = false;
-
-        #region IProcess Members
 
         public void Start()
         {
@@ -43,8 +41,6 @@ namespace Processes
 
             StopProcess(_childProcess);
         }
-
-        #endregion
 
         #region Election Methods
 

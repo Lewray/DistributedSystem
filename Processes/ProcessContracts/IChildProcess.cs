@@ -17,6 +17,9 @@ namespace ProcessContracts
         [OperationContract]
         void DoTask(Task task);
 
+        [OperationContract]
+        TaskStatus CheckTaskProgress(int taskId);
+
         void FindCoordinator();
     }
 }

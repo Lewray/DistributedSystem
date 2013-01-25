@@ -9,15 +9,17 @@ using ProcessContracts;
 
 namespace Processes
 {
-    class Coordinator : ICoordinator
+    class Coordinator : ICoordinator, ITask
     {
         Dictionary<int, Task> _tasks = new Dictionary<int, Task>();
 
-        List<EndpointAddress> _processes = new List<EndpointAddress>();
+        Queue<EndpointAddress> _processes = new Queue<EndpointAddress>();
 
         ServiceHost _coordinatorHost;
 
-        private static int _nextTaskId = 0;     
+        ServiceHost _taskHost;
+
+        private static int _nextTaskId = 0;
 
         private static int NextTaskId
         {
@@ -33,19 +35,7 @@ namespace Processes
 
         public void Start()
         {
-            Console.WriteLine("Starting local Coordinator Service...");
 
-            Uri baseAddress = DiscoveryUtils.DiscoveryHelper.AvailableTcpBaseAddress;
-                        
-            this.FindProcesses();
-
-            _coordinatorHost = new ServiceHost(typeof(Coordinator), baseAddress);
-
-            _coordinatorHost.AddDefaultEndpoints();
-
-            _coordinatorHost.Open();
-
-            IntroduceToProcesses();
         }
 
         public void Stop()
@@ -77,7 +67,7 @@ namespace Processes
 
             // assign task to process
 
-            return -1;
+            return t.TaskId;
         }
 
         public TaskStatus CheckTaskProgress(int taskId)
@@ -98,7 +88,7 @@ namespace Processes
 
             if (!_processes.Contains(a))
             {
-                _processes.Add(a);
+                _processes.Enqueue(a);
             }   
         }
 
@@ -116,7 +106,7 @@ namespace Processes
                 Console.WriteLine(address);
             }
 
-            _processes.AddRange(addresses);
+            _processes = new Queue<EndpointAddress>(addresses);
         }
 
         public IEnumerable<System.ServiceModel.EndpointAddress> GetProcesses()
@@ -125,6 +115,49 @@ namespace Processes
         }
 
         #endregion
+
+        #region ITask Members
+
+        public TaskStatus AcceptTask(int num1, int num2, string op)
+        {
+            string taskData = num1.ToString() + "," + op + "," + num2.ToString();
+
+            int taskId = this.StartNewTask(taskData);
+
+            TaskStatus ts = new TaskStatus();
+
+            ts.TaskId = taskId;
+
+            ts.Complete = false;
+            ts.Successful = false;
+            ts.ResultMessage = "Task started...";
+
+            return ts;
+        }
+
+        public TaskStatus CheckProgress(int taskId)
+        {
+            return this.CheckTaskProgress(taskId);
+        }
+
+        #endregion
+
+        private void StartCoordinator()
+        {
+            Console.WriteLine("Starting local Coordinator Service...");
+
+            Uri baseAddress = DiscoveryUtils.DiscoveryHelper.AvailableTcpBaseAddress;
+
+            this.FindProcesses();
+
+            _coordinatorHost = new ServiceHost(typeof(Coordinator), baseAddress);
+
+            _coordinatorHost.AddDefaultEndpoints();
+
+            _coordinatorHost.Open();
+
+            IntroduceToProcesses();
+        }
 
         private void IntroduceToProcesses()
         {
@@ -140,6 +173,11 @@ namespace Processes
 
                 proxy.Introduce(this._coordinatorHost.Description.Endpoints[0].Address.ToString());
             }
+        }
+
+        private void DelegateTask(Task t)
+        {
+
         }
     }
 }
