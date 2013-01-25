@@ -11,14 +11,16 @@ namespace ProcessContracts
 {
     class ChildProcess : IChildProcess, ITask
     {
-        private EndpointAddress _coordinatorAddress;
+        private readonly object _statusLock = new object();
+        
+        private static EndpointAddress _coordinatorAddress;
 
         private ServiceHost _processHost;
 
-        private Queue<Task> _tasks = new Queue<Task>();
+        private static Queue<Task> _tasks = new Queue<Task>();
 
-        private Dictionary<int, TaskStatus> _taskStatuses = new Dictionary<int, TaskStatus>();
-
+        private static Dictionary<int, TaskStatus> _taskStatuses = new Dictionary<int, TaskStatus>();
+                
         private Thread _worker;
 
         private bool _shutDown = false;
@@ -41,7 +43,9 @@ namespace ProcessContracts
 
             IntroduceToCoordinator();
 
-            _worker.Start(new ThreadStart(DoWork));
+            _worker = new Thread(new ThreadStart(DoWork));
+
+            _worker.Start();
         }
 
         public void Stop()
@@ -70,7 +74,7 @@ namespace ProcessContracts
 
             Binding binding = new NetTcpBinding();
 
-            ICoordinator proxy = ChannelFactory<ICoordinator>.CreateChannel(binding, this._coordinatorAddress);
+            ICoordinator proxy = ChannelFactory<ICoordinator>.CreateChannel(binding, _coordinatorAddress);
 
             int taskId = proxy.StartNewTask(taskData);
 
@@ -89,7 +93,7 @@ namespace ProcessContracts
         {
             Binding binding = new NetTcpBinding();
 
-            ICoordinator proxy = ChannelFactory<ICoordinator>.CreateChannel(binding, this._coordinatorAddress);
+            ICoordinator proxy = ChannelFactory<ICoordinator>.CreateChannel(binding, _coordinatorAddress);
 
             return proxy.CheckTaskProgress(taskId);
         }
@@ -106,7 +110,11 @@ namespace ProcessContracts
         public void DoTask(Task task)
         {
             _tasks.Enqueue(task);
-            _taskStatuses.Add(task.TaskId, new TaskStatus() { TaskId = task.TaskId, Complete = false, Successful = false, ResultMessage = "Task Queued..." });
+
+            lock (_statusLock)
+            {
+                _taskStatuses.Add(task.TaskId, new TaskStatus() { TaskId = task.TaskId, Complete = false, Successful = false, ResultMessage = "Task Queued..." });
+            }
         }
 
         public void FindCoordinator()
@@ -128,18 +136,25 @@ namespace ProcessContracts
 
         public TaskStatus CheckTaskProgress(int taskId)
         {
-            throw new NotImplementedException();
+            TaskStatus status;
+
+            lock (_statusLock)
+            {
+                status = _taskStatuses[taskId];
+            }
+
+            return status;
         }
 
         #endregion
 
         private void IntroduceToCoordinator()
         {
-            Console.WriteLine("Introducing to: {0}", this._coordinatorAddress);
+            Console.WriteLine("Introducing to: {0}", _coordinatorAddress);
 
             Binding binding = new NetTcpBinding();
 
-            ICoordinator proxy = ChannelFactory<ICoordinator>.CreateChannel(binding, this._coordinatorAddress);
+            ICoordinator proxy = ChannelFactory<ICoordinator>.CreateChannel(binding, _coordinatorAddress);
 
             proxy.Introduce(this._processHost.Description.Endpoints[0].Address.ToString());            
         }
@@ -159,7 +174,45 @@ namespace ProcessContracts
 
         private void DoNextTask(Task task)
         {
+            int operand1, operand2, result;
+
             string[] chunks = task.TaskData.Split(new[] { ',' });
+
+            operand1 = int.Parse(chunks[0]);
+            operand2 = int.Parse(chunks[2]);
+            
+            switch (chunks[1])
+            {
+                case "+":
+
+                    result = operand1 + operand2;
+
+                    break;
+                case "-":
+
+                    result = operand1 - operand2;
+
+                    break;
+                case "*":
+
+                    result = operand1 * operand2;
+
+                    break;
+                case "/":
+
+                    result = operand1 / operand2;
+
+                    break;
+                default:
+                    throw new Exception("Operator not recognised");
+            }
+
+            TaskStatus status = new TaskStatus() { Successful = true, Complete = true, ResultMessage = string.Format("The result of {0} is {1}", task.TaskData, result) };
+
+            lock (_statusLock)
+            {
+                _taskStatuses[task.TaskId] = status;
+            }
         }        
     }
 }

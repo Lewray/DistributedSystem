@@ -15,8 +15,8 @@ namespace Task
         {
             bool validArguments = true;
 
-            int operand1, operand2;
-            string op;
+            int operand1 = -1, operand2 = -1, port = 12345;
+            string op = string.Empty;
             string[] ops = new string[] { "+", "-", "*", "/" };
 
             if (args.Count() < 4)
@@ -43,19 +43,27 @@ namespace Task
 
                 validArguments = false;
             }
+            else if (!int.TryParse(args[3], out port))
+            {
+                Console.WriteLine("Port number must be of type Int32");
+
+                validArguments = false;
+            }
 
             if (validArguments)
             {
+                op = args[2];
+
                 TaskStatus t = StartTask(operand1, operand2, op, port);
 
-                WaitForResult(t);
+                WaitForResult(t, port);
             }
 
             Console.WriteLine("Press Enter to exit");
             Console.ReadLine();
         }
 
-        private static void WaitForResult(TaskStatus t)
+        private static void WaitForResult(TaskStatus t, int port)
         {
             bool isComplete = false;
 
@@ -73,7 +81,7 @@ namespace Task
 
                 Thread.Sleep(500);
 
-                EndpointAddress a = new EndpointAddress(string.Format("tcp://localhost:{0}", port.ToString()));
+                EndpointAddress a = new EndpointAddress(string.Format("net.tcp://localhost:{0}", port.ToString()));
 
                 Binding binding = new NetTcpBinding();
 
@@ -81,11 +89,11 @@ namespace Task
 
                 TaskStatus status = proxy.CheckProgress(t.TaskId);
 
-                isComplete = status.Complete
+                isComplete = status.Complete;
 
                 Console.WriteLine();
                 Console.WriteLine("Status Report for Task ID:{0}", t.TaskId);
-                Console.WriteLine("The task is currently {0}", status.Complete : "Complete" ? "Incomplete");
+                Console.WriteLine("The task is currently {0}", status.Complete ? "Complete" : "Incomplete");
                 Console.WriteLine("The current state is: {0}", status.ResultMessage);
                 Console.WriteLine();
             }
@@ -96,7 +104,7 @@ namespace Task
 
         private static TaskStatus StartTask(int operand1, int operand2, string op, int port)
         {
-            EndpointAddress a = new EndpointAddress(string.Format("tcp://localhost:{0}", port.ToString()));
+            EndpointAddress a = new EndpointAddress(string.Format("net.tcp://localhost:{0}", port.ToString()));
 
             Binding binding = new NetTcpBinding();
 

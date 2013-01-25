@@ -11,13 +11,11 @@ namespace Processes
 {
     class Coordinator : ICoordinator, ITask
     {
-        Dictionary<int, Task> _tasks = new Dictionary<int, Task>();
+        private static Dictionary<int, Task> _tasks = new Dictionary<int, Task>();
 
-        Queue<EndpointAddress> _processes = new Queue<EndpointAddress>();
+        private static Queue<EndpointAddress> _processes = new Queue<EndpointAddress>();
 
         ServiceHost _coordinatorHost;
-
-        ServiceHost _taskHost;
 
         private static int _nextTaskId = 0;
 
@@ -35,7 +33,7 @@ namespace Processes
 
         public void Start()
         {
-
+            this.StartCoordinator();
         }
 
         public void Stop()
@@ -62,17 +60,34 @@ namespace Processes
             Task t = new Task() { TaskId = NextTaskId, TaskData = taskData, Status = new TaskStatus() };
 
             // get next available process
+            EndpointAddress address = _processes.Dequeue();
 
             // set Task assigned process address
+            t.AssignedProcessAddress = address.ToString();
+
+            _tasks.Add(t.TaskId, t);
 
             // assign task to process
+            Binding binding = new NetTcpBinding();
+
+            IChildProcess proxy = ChannelFactory<IChildProcess>.CreateChannel(binding, address);
+
+            _processes.Enqueue(address);
+
+            proxy.DoTask(t);
 
             return t.TaskId;
         }
 
         public TaskStatus CheckTaskProgress(int taskId)
         {
-            throw new NotImplementedException();
+            Task t = _tasks[taskId];
+
+            Binding binding = new NetTcpBinding();
+
+            IChildProcess proxy = ChannelFactory<IChildProcess>.CreateChannel(binding, new EndpointAddress(t.AssignedProcessAddress));
+
+            return proxy.CheckTaskProgress(taskId);
         }
 
         public SystemStatus GetCurrentSystemStatus()
@@ -173,11 +188,6 @@ namespace Processes
 
                 proxy.Introduce(this._coordinatorHost.Description.Endpoints[0].Address.ToString());
             }
-        }
-
-        private void DelegateTask(Task t)
-        {
-
         }
     }
 }
