@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
+using System.ServiceModel.Channels;
 using System.Text;
 using System.Threading.Tasks;
-using System.ServiceModel.Channels;
 using DiscoveryUtils;
 
 using ElectionContracts;
@@ -23,8 +23,6 @@ namespace Processes
         IChildProcess _childProcess;
 
         ICoordinator _coordinator;
-
-        bool _isCoordinator = false;
 
         public void Start()
         {
@@ -52,6 +50,8 @@ namespace Processes
 
             _election = new Election();
 
+            _election.Elected += ElectionElected;
+
             _election.FindConstituents();
 
             _electionHost = new ServiceHost(typeof(Election), baseAddress);
@@ -60,7 +60,19 @@ namespace Processes
 
             _electionHost.Open();
 
+            _election.ElectionIdentity = _electionHost.Description.Endpoints[1].Address;
+
+            Console.WriteLine("Election Service Started at: {0}", _electionHost.Description.Endpoints[1].Address.ToString());
+            Console.WriteLine();
+
             IntroduceElection();
+        }
+
+        void ElectionElected(object sender, EventArgs e)
+        {
+            StopProcess(_childProcess);
+
+            StartCoordinator();            
         }
         
         private void IntroduceElection()
@@ -77,10 +89,14 @@ namespace Processes
 
                 proxy.Introduce(_electionHost.Description.Endpoints[1].Address.ToString());
             }
+
+            Console.WriteLine();
         }
 
         private void StopElectionService()
         {
+            _election.Stop();
+
             _electionHost.Close();
         }
 
@@ -107,6 +123,8 @@ namespace Processes
             _childProcess.Start();
 
             Console.WriteLine("I am a new Process!");
+
+            _election.SetProcess();
         }
 
         private void StartCoordinator()
@@ -115,9 +133,9 @@ namespace Processes
 
             _coordinator.Start();
 
-            _isCoordinator = true;
-
             Console.WriteLine("I am the new Coordinator!");
+
+            _election.SetCoordinator();
         }
 
         private void StopProcess(IProcess process)

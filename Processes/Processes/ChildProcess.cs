@@ -123,7 +123,7 @@ namespace ProcessContracts
 
             foreach (EndpointAddress address in addresses)
             {
-                Console.WriteLine(address);
+                Console.WriteLine("Coordinator found at: {0}", address);
             }
 
             if (addresses.Count() <= 0)
@@ -151,6 +151,7 @@ namespace ProcessContracts
         private void IntroduceToCoordinator()
         {
             Console.WriteLine("Introducing to: {0}", _coordinatorAddress);
+            Console.WriteLine();
 
             Binding binding = new NetTcpBinding();
 
@@ -174,14 +175,17 @@ namespace ProcessContracts
 
         private void DoNextTask(Task task)
         {
-            int operand1, operand2, result;
+            Console.WriteLine("Starting Task ID: {0}...", task.TaskId);
 
+            int operand1, operand2, result;
+            string op;
             string[] chunks = task.TaskData.Split(new[] { ',' });
 
             operand1 = int.Parse(chunks[0]);
+            op = chunks[1];
             operand2 = int.Parse(chunks[2]);
             
-            switch (chunks[1])
+            switch (op)
             {
                 case "+":
 
@@ -207,12 +211,17 @@ namespace ProcessContracts
                     throw new Exception("Operator not recognised");
             }
 
-            TaskStatus status = new TaskStatus() { Successful = true, Complete = true, ResultMessage = string.Format("The result of {0} is {1}", task.TaskData, result) };
+            TaskStatus status = new TaskStatus() { Successful = true, Complete = true, ResultMessage = string.Format("The result of {0} is {1}", (operand1.ToString() + " " + op + " " + operand2.ToString()), result) };
 
             lock (_statusLock)
             {
                 _taskStatuses[task.TaskId] = status;
             }
+
+            Thread.Sleep(1000);
+
+            Console.WriteLine("Task completed");
+            Console.WriteLine();
         }        
     }
 }

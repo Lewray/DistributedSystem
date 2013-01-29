@@ -7,7 +7,11 @@ using System.Threading.Tasks;
 
 namespace ProcessContracts
 {
-    [ServiceContract(Name = "Task", Namespace = "http://ProcessContracts")]
+    /// <summary>
+    /// This interface defines the methods which must be implemented in order for a process
+    /// to accept tasks from a user through the command line.
+    /// </summary>
+    [ServiceContract(Name = "Task", Namespace = "http://ProcessContracts")]    
     public interface ITask
     {
         [OperationContract]

@@ -46,7 +46,9 @@ namespace DiscoveryUtils
             DiscoveryClient discoveryClient = new DiscoveryClient(new UdpDiscoveryEndpoint());
 
             FindCriteria criteria = new FindCriteria(typeof(T));
+            criteria.Duration = new TimeSpan(0, 0, 5);
 
+            Console.WriteLine();
             Console.WriteLine("Searching for: {0}", criteria.ContractTypeNames[0]);
 
             if (scope != null)
@@ -57,9 +59,12 @@ namespace DiscoveryUtils
             FindResponse discovered = discoveryClient.Find(criteria);
             discoveryClient.Close();
 
-            Console.WriteLine("finished Searching");
+            var addresses = discovered.Endpoints.Select((endpoint) => endpoint.Address).ToArray();
 
-            return discovered.Endpoints.Select((endpoint) => endpoint.Address).ToArray();
+            Console.WriteLine("Finished Searching: {0} services found", addresses.Count());
+            Console.WriteLine();
+
+            return addresses;
         }
     }
 }

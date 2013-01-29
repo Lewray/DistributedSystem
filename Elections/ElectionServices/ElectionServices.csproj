@@ -41,6 +41,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Election.cs" />
+    <Compile Include="EndpointAddressExtensions.cs" />
+    <Compile Include="NominationEndointComparer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
