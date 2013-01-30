@@ -5,9 +5,10 @@ using System.ServiceModel;
 using System.ServiceModel.Channels;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
-namespace ProcessContracts
+using ProcessContracts;
+
+namespace Processes
 {
     class ChildProcess : IChildProcess, ITask
     {
@@ -104,6 +105,8 @@ namespace ProcessContracts
 
         public void Introduce(string coordinatorServiceAddress)
         {
+            Console.WriteLine("New Coordinator address received: {0}", coordinatorServiceAddress);
+            Console.WriteLine();
             _coordinatorAddress = new EndpointAddress(coordinatorServiceAddress);
         }
 
@@ -157,7 +160,7 @@ namespace ProcessContracts
 
             ICoordinator proxy = ChannelFactory<ICoordinator>.CreateChannel(binding, _coordinatorAddress);
 
-            proxy.Introduce(this._processHost.Description.Endpoints[0].Address.ToString());            
+            proxy.Introduce(this._processHost.Description.Endpoints[1].Address.ToString());            
         }
 
         private void DoWork()
@@ -211,7 +214,7 @@ namespace ProcessContracts
                     throw new Exception("Operator not recognised");
             }
 
-            TaskStatus status = new TaskStatus() { Successful = true, Complete = true, ResultMessage = string.Format("The result of {0} is {1}", (operand1.ToString() + " " + op + " " + operand2.ToString()), result) };
+            TaskStatus status = new TaskStatus() { Successful = true, Complete = true, ResultMessage = string.Format("{0}: The result of {1} is {2}", _processHost.Description.Endpoints[1].Address.ToString(), (operand1.ToString() + " " + op + " " + operand2.ToString()), result) };
 
             lock (_statusLock)
             {

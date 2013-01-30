@@ -65,6 +65,10 @@ namespace Processes
             // set Task assigned process address
             t.AssignedProcessAddress = address.ToString();
 
+            Console.WriteLine("Task ID {0} Created", t.TaskId);
+            Console.WriteLine("Task assigned to {0}", t.AssignedProcessAddress);
+            Console.WriteLine();
+
             _tasks.Add(t.TaskId, t);
 
             // assign task to process
@@ -114,7 +118,7 @@ namespace Processes
 
         public void FindProcesses()
         {
-            var addresses = DiscoveryUtils.DiscoveryHelper.DiscoverAddresses<IProcess>();
+            var addresses = DiscoveryUtils.DiscoveryHelper.DiscoverAddresses<IChildProcess>();
 
             foreach (EndpointAddress address in addresses)
             {
@@ -186,7 +190,7 @@ namespace Processes
 
                 IChildProcess proxy = ChannelFactory<IChildProcess>.CreateChannel(binding, address);
 
-                proxy.Introduce(this._coordinatorHost.Description.Endpoints[0].Address.ToString());
+                proxy.Introduce(this._coordinatorHost.Description.Endpoints[1].Address.ToString());
             }
         }
     }

@@ -141,6 +141,11 @@ namespace ElectionServices
             {
                 result = false;
             }
+            else
+            {
+                _currentCoordinator = a;
+                _currentTimeStamp = DateTime.Now;
+            }
 
             return result;
         }
@@ -256,11 +261,11 @@ namespace ElectionServices
                 }
             }
 
-            IEnumerable<KeyValuePair<EndpointAddress, int>> addresses;
+            List<KeyValuePair<EndpointAddress, int>> addresses;
 
             lock (_electionCollectionLock)
             {
-                addresses = _failCount.Where(kvp => !_electionServices.Contains(kvp.Key));
+                addresses = new List<KeyValuePair<EndpointAddress,int>>(_failCount.Where(kvp => !_electionServices.Contains(kvp.Key)));
             }
 
             foreach (KeyValuePair<EndpointAddress, int> a in addresses)
@@ -317,23 +322,23 @@ namespace ElectionServices
 
             if (nominees.Count > 0)
             {
-                foreach(EndpointAddress a in nominees)
-                {
-                    Binding binding = new NetTcpBinding();
+                //foreach(EndpointAddress a in nominees)
+                //{
+                //    Binding binding = new NetTcpBinding();
 
-                    try
-                    {
-                        IElection proxy = ChannelFactory<IElection>.CreateChannel(binding, a);
+                //    try
+                //    {
+                //        IElection proxy = ChannelFactory<IElection>.CreateChannel(binding, a);
 
-                        proxy.Elect();
+                //        proxy.Elect();
 
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Failed to Elect {0}", a.Uri.AbsoluteUri);
-                    }
-                }                
+                //        break;
+                //    }
+                //    catch (Exception ex)
+                //    {
+                //        Console.WriteLine("Failed to Elect {0}", a.Uri.AbsoluteUri);
+                //    }
+                //}
             }
             else
             {
@@ -363,6 +368,7 @@ namespace ElectionServices
                     catch (Exception ex)
                     {
                         Console.WriteLine("Failed to send nomination to {0}", a.Uri.AbsoluteUri);
+                        approved = false;
                     }
                 }
 
