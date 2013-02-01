@@ -13,7 +13,12 @@ namespace ElectionContracts
         /// <summary>
         /// Raised when the process is successfully elected as the new Coordinator
         /// </summary>
-        event EventHandler Elected; 
+        event EventHandler Elected;
+
+        /// <summary>
+        /// Raised when a Coordinator loses communication with one or more processes
+        /// </summary>
+        event EventHandler ProcessLost; 
 
         /// <summary>
         /// Gets a value representing the number of IElection implementations found through WCF Discovery

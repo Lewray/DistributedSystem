@@ -11,6 +11,10 @@ namespace Task
 {
     class Program
     {
+        /// <summary>
+        /// Accepts user input through the commandline and passes a task onto the specified process
+        /// </summary>
+        /// <param name="args"></param>
         static void Main(string[] args)
         {
             bool validArguments = true;

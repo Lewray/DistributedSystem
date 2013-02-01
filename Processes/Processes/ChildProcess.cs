@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
 using System.Text;
@@ -26,6 +27,8 @@ namespace Processes
 
         private bool _shutDown = false;
 
+        private CancellationTokenSource _cancelSource = new CancellationTokenSource();
+
         #region IProcess Members
 
         public void Start()
@@ -47,15 +50,20 @@ namespace Processes
             _worker = new Thread(new ThreadStart(DoWork));
 
             _worker.Start();
+
+            StartStatusServer();
         }
 
         public void Stop()
         {
+            _shutDown = true;
+
+            _cancelSource.Cancel();
+
             if (_processHost != null)
             {
                 try
-                {
-                    _shutDown = true;
+                {                    
                     _processHost.Close();
                 }
                 catch (Exception ex)
@@ -63,6 +71,13 @@ namespace Processes
                     Console.WriteLine(ex.Message);
                 }
             }
+        }
+
+        public void StartStatusServer()
+        {
+            Thread worker = new Thread(new ThreadStart(StartServer));
+
+            worker.Start();
         }
 
         #endregion
@@ -216,15 +231,79 @@ namespace Processes
 
             TaskStatus status = new TaskStatus() { Successful = true, Complete = true, ResultMessage = string.Format("{0}: The result of {1} is {2}", _processHost.Description.Endpoints[1].Address.ToString(), (operand1.ToString() + " " + op + " " + operand2.ToString()), result) };
 
+            // wait here to mimic a long running task
+            Thread.Sleep(5000);
+
             lock (_statusLock)
             {
                 _taskStatuses[task.TaskId] = status;
-            }
-
-            Thread.Sleep(1000);
+            }            
 
             Console.WriteLine("Task completed");
             Console.WriteLine();
-        }        
+        }
+
+        private void StartServer()
+        {
+            HttpListener listener = new HttpListener();
+
+            int port = DiscoveryUtils.DiscoveryHelper.FindAvailablePort();
+
+            string serverString = "http://localhost:" + port + "/";
+
+            listener.Prefixes.Add(serverString);
+
+            Console.WriteLine("Starting status server at: {0}", serverString);
+
+            listener.Start();
+
+            while (!_shutDown)
+            {
+
+                try
+                {
+                    System.Threading.Tasks.Task<HttpListenerContext> t = listener.GetContextAsync();
+
+                    CancellationToken token = _cancelSource.Token;
+
+                    t.Wait(token);
+
+                    if (!t.IsCanceled)
+                    {
+                        HttpListenerContext context = t.Result;
+
+                        HttpListenerResponse response = context.Response;
+
+                        string responseString = GetStatusPage();
+
+                        byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+
+                        response.ContentLength64 = buffer.Length;
+
+                        using (System.IO.Stream output = response.OutputStream)
+                        {
+                            output.Write(buffer, 0, buffer.Length);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }         
+
+            listener.Stop();
+        }
+
+        private string GetStatusPage()
+        {
+            Binding binding = new NetTcpBinding();
+            
+            ICoordinator proxy = ChannelFactory<ICoordinator>.CreateChannel(binding, _coordinatorAddress);
+
+            string status = proxy.GetCurrentSystemStatus();
+            
+            return status;
+        }
     }
 }

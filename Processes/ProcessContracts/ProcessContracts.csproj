@@ -46,7 +46,6 @@
     <Compile Include="IProcess.cs" />
     <Compile Include="ITask.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SystemStatus.cs" />
     <Compile Include="Task.cs" />
     <Compile Include="TaskStatus.cs" />
   </ItemGroup>

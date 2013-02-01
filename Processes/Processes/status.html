@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html>
+<html lang="en-gb" xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta charset="utf-8" />
+        <title>SWM49 Status Page</title>
+    </head>
+    <body>        
+        <div id="pageHeader">
+            <h1>SWM49:Distributed Systems</h1>
+        </div>
+        <div>
+            <h2>System Activity</h2>            
+            <table border="1">
+                <tr>
+                    <td><h5>Coordinator Up-time</h5></td>
+                    <td><h5>@uptime</h5></td>
+                </tr>
+                <tr>
+                    <td><h5>Total Tasks Handled</h5></td>
+                    <td><h5>@taskCount</h5></td>
+                </tr>
+            </table>
+            <h2>Active Processes</h2>
+            @processtable
+            <h2>Live Tasks</h2>
+            @activetasks
+        </div>
+    </body>
+</html>

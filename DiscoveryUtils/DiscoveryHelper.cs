@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace DiscoveryUtils
 {
+    /// <summary>
+    /// Helper methods for initialising new services and for service discovery
+    /// </summary>
     public class DiscoveryHelper
     {
         public static Uri AvailableTcpBaseAddress

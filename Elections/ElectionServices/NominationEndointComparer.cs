@@ -8,6 +8,16 @@ using System.Threading.Tasks;
 
 namespace ElectionServices
 {
+    /// <summary>
+    /// Compares two endpoint addresses using the host (if it is an IP address) and port number (if provided)
+    /// If the hosts are defined as IP addresses then the octets are compared one by one starting with the most significant.
+    /// If a single octet is greater then that endpoint address is considered the greater value.
+    /// 
+    /// If both IP addresses are identical or they cannot be compared because one or both of the hosts is a string then the port
+    /// numbers specified are compared. The higher value of port being considered the greater value of endpoint address.
+    /// 
+    /// If neither of these methods can be performed then an argument exception is thrown.
+    /// </summary>
     public class NominationEndointComparer : IComparer<EndpointAddress>
     {
         #region IComparer<EndpointAddress> Members

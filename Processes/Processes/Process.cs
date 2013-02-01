@@ -51,6 +51,7 @@ namespace Processes
             _election = new Election();
 
             _election.Elected += ElectionElected;
+            _election.ProcessLost += ElectionProcessLost;
 
             _election.FindConstituents();
 
@@ -66,6 +67,11 @@ namespace Processes
             Console.WriteLine();
 
             IntroduceElection();
+        }
+
+        void ElectionProcessLost(object sender, EventArgs e)
+        {
+            _coordinator.FindProcesses();
         }
 
         void ElectionElected(object sender, EventArgs e)

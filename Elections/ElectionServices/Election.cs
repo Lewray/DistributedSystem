@@ -33,6 +33,8 @@ namespace ElectionServices
 
         private Thread _worker;
 
+        public event EventHandler ProcessLost;
+
         #region IElection Members
 
         public event EventHandler Elected;
@@ -201,6 +203,9 @@ namespace ElectionServices
         {
             while (!_shutDown && _coordinator)
             {
+                // arbitrary wait value so that the loop does not run continuously and cause 100% CPU time
+                // this is also set low enough to send a few 'heartbeat' messages to the child processes
+                // within the timeout defined for them to believe the coordinator has crashed
                 Thread.Sleep(7000);
 
                 if (!_shutDown && _coordinator)
@@ -250,6 +255,8 @@ namespace ElectionServices
 
         private void RemoveFailures()
         {
+            bool processLost = false;
+
  	        foreach (KeyValuePair<EndpointAddress, int> kvp in _failCount)
             {
                 if (kvp.Value >= 3)
@@ -257,6 +264,8 @@ namespace ElectionServices
                     lock (_electionCollectionLock)
                     {
                         _electionServices.Remove(kvp.Key);
+
+                        processLost = true;
                     }
                 }
             }
@@ -272,6 +281,11 @@ namespace ElectionServices
             {
                 _failCount.Remove(a.Key);
             }
+
+            if (processLost)
+            {
+                OnProcessLost(new EventArgs());
+            }
         }
 
         private void DoProcessWork()
@@ -279,6 +293,7 @@ namespace ElectionServices
             // prevent election from being started on start-up
             _currentTimeStamp = DateTime.Now;
 
+            // loop until the application is shutdown or this process is elected as the coordinator
             while (!_shutDown && _process)
             {
                 Thread.Sleep(5);
@@ -320,37 +335,23 @@ namespace ElectionServices
                 nominees = _electionServices.FindAll(ea => (ea.IsGreaterThan(ElectionIdentity) && !ea.Equals(_currentCoordinator)));
             }
 
-            if (nominees.Count > 0)
-            {
-                //foreach(EndpointAddress a in nominees)
-                //{
-                //    Binding binding = new NetTcpBinding();
-
-                //    try
-                //    {
-                //        IElection proxy = ChannelFactory<IElection>.CreateChannel(binding, a);
-
-                //        proxy.Elect();
-
-                //        break;
-                //    }
-                //    catch (Exception ex)
-                //    {
-                //        Console.WriteLine("Failed to Elect {0}", a.Uri.AbsoluteUri);
-                //    }
-                //}
-            }
-            else
+            if (nominees.Count == 0)
             {
                 bool approved = true;
 
                 List<EndpointAddress> temp;
 
+                // get local copy of election service endpoints to avoid locking the collection through the foreach loop
                 lock (_electionCollectionLock)
                 {
                     temp = new List<EndpointAddress>(_electionServices);
                 }
 
+                /*
+                 * Send a 'nomination' message to all running election services
+                 * Nomination is misleading... Volunteering would be more accurate.
+                 * This service is nominating itself as the new coordinator
+                 */
                 foreach (EndpointAddress a in nominees)
                 {
                     Binding binding = new NetTcpBinding();
@@ -359,6 +360,10 @@ namespace ElectionServices
                     {
                         IElection proxy = ChannelFactory<IElection>.CreateChannel(binding, a);
 
+                        /*
+                         * If a Nomination method returns a fail then the service should stop sending to any others.
+                         * In this case another election service is aware of one which supersedes the 'volunteer'
+                         */
                         if (!proxy.Nomination(ElectionIdentity.Uri.AbsoluteUri))
                         {
                             approved = false;
@@ -384,6 +389,16 @@ namespace ElectionServices
         private void OnElected(EventArgs e)
         {
             EventHandler handler = Elected;
+
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+
+        private void OnProcessLost(EventArgs e)
+        {
+            EventHandler handler = ProcessLost;
 
             if (handler != null)
             {
